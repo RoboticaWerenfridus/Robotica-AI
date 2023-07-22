@@ -1,3 +1,4 @@
+print("Made by Nathan Schalkwijk")
 import RPi.GPIO as gpio
 import sys
 import pygame
