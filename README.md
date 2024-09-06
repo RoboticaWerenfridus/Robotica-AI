@@ -1,5 +1,5 @@
 # Robotica-AI                  
->[NOTE]
+>[!NOTE]
 >This needs to be updated to work with the latest openai python library
 
 >[!CAUTION]
