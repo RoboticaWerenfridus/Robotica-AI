@@ -1,0 +1,155 @@
+import RPi.GPIO as gpio
+import sys
+import pygame
+import openai  # Ensure you have installed this library
+import cv2  # OpenCV for obstacle detection
+import numpy as np
+
+# GPIO setup (set pin numbers for your robot)
+pin1, pin2, pin3, pin4 = 17, 18, 22, 23  # Update with your GPIO pins
+
+gpio.setmode(gpio.BCM)
+gpio.setup(pin1, gpio.OUT)
+gpio.setup(pin2, gpio.OUT)
+gpio.setup(pin3, gpio.OUT)
+gpio.setup(pin4, gpio.OUT)
+
+# Pygame initialization for joystick control
+pygame.init()
+pygame.joystick.init()
+joystick = pygame.joystick.Joystick(0)
+joystick.init()
+
+# OpenAI setup (Replace 'YOUR_GPT3_API_KEY' with your actual API key)
+openai.api_key = 'YOUR_GPT3_API_KEY'
+
+# Webcam setup using OpenCV
+cap = cv2.VideoCapture(0)  # 0 is the default camera
+
+def stop():
+    gpio.output(pin1, False)
+    gpio.output(pin2, False)
+    gpio.output(pin3, False)
+    gpio.output(pin4, False)
+
+def move_forward():
+    gpio.output(pin1, True)
+    gpio.output(pin2, False)
+    gpio.output(pin3, True)
+    gpio.output(pin4, False)
+
+def move_backward():
+    gpio.output(pin1, False)
+    gpio.output(pin2, True)
+    gpio.output(pin3, False)
+    gpio.output(pin4, True)
+
+def turn_left():
+    gpio.output(pin1, False)
+    gpio.output(pin2, True)
+    gpio.output(pin3, True)
+    gpio.output(pin4, False)
+
+def turn_right():
+    gpio.output(pin1, True)
+    gpio.output(pin2, False)
+    gpio.output(pin3, False)
+    gpio.output(pin4, True)
+
+def ai_control(joystick):
+    # Get joystick values
+    x_axis = joystick.get_axis(0)
+    y_axis = joystick.get_axis(1)
+
+    # Send to GPT-3 for AI response (as in your original code)
+    prompt = f"Joystick X-axis: {x_axis:.2f}, Y-axis: {y_axis:.2f}"
+    response = openai.Completion.create(
+        engine="text-davinci-002",  # Choose an appropriate GPT-3 engine
+        prompt=prompt,
+        max_tokens=50,
+        temperature=0.7
+    )
+    ai_response = response.choices[0].text.strip()
+
+    # Basic movement logic based on AI response
+    if "forward" in ai_response:
+        move_forward()
+    elif "backward" in ai_response:
+        move_backward()
+    elif "left" in ai_response:
+        turn_left()
+    elif "right" in ai_response:
+        turn_right()
+    else:
+        stop()
+
+def detect_obstacle(frame):
+    # Convert to grayscale and apply GaussianBlur
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Simple thresholding to detect objects
+    _, thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY_INV)
+
+    # Find contours of the objects in the frame
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if len(contours) > 0:
+        # If an obstacle is detected, return True
+        return True
+    else:
+        return False
+
+def random_movement():
+    # Implement random movement logic
+    import random
+    move = random.choice([move_forward, move_backward, turn_left, turn_right])
+    move()
+
+def main():
+    try:
+        while True:
+            # Capture frame-by-frame from the webcam
+            ret, frame = cap.read()
+
+            if ret:
+                obstacle_detected = detect_obstacle(frame)
+
+                # Show the frame for debugging purposes
+                cv2.imshow('Frame', frame)
+
+                if obstacle_detected:
+                    # If an obstacle is detected, stop and choose a random movement
+                    stop()
+                    random_movement()
+                else:
+                    # Continue moving forward if no obstacle
+                    move_forward()
+
+            # Process Pygame events
+            for event in pygame.event.get():
+                if event.type == pygame.JOYAXISMOTION:
+                    ai_control(joystick)  # AI joystick control
+                elif event.type == pygame.JOYBUTTONUP:
+                    stop()
+                elif event.type == pygame.QUIT:
+                    stop()
+                    pygame.quit()
+                    sys.exit()
+
+            # Exit on 'q' key press
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+    except KeyboardInterrupt:
+        stop()
+    finally:
+        # Cleanup GPIO and OpenCV resources
+        stop()
+        cap.release()
+        cv2.destroyAllWindows()
+        pygame.quit()
+        sys.exit()
+
+if __name__ == '__main__':
+    main()
