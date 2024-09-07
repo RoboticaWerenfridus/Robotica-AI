@@ -20,8 +20,8 @@ pygame.joystick.init()
 joystick = pygame.joystick.Joystick(0)
 joystick.init()
 
-# OpenAI setup (Replace 'YOUR_GPT3_API_KEY' with your actual API key)
-openai.api_key = 'YOUR_GPT3_API_KEY'
+# OpenAI setup (Replace 'YOUR_GPT_API_KEY' with your actual API key)
+openai.api_key = 'YOUR_GPT_API_KEY'
 
 # Webcam setup using OpenCV
 cap = cv2.VideoCapture(0)  # 0 is the default camera
@@ -61,15 +61,19 @@ def ai_control(joystick):
     x_axis = joystick.get_axis(0)
     y_axis = joystick.get_axis(1)
 
-    # Send to GPT-3 for AI response (as in your original code)
-    prompt = f"Joystick X-axis: {x_axis:.2f}, Y-axis: {y_axis:.2f}"
-    response = openai.Completion.create(
-        engine="text-davinci-002",  # Choose an appropriate GPT-3 engine
-        prompt=prompt,
+    # Send to GPT-3.5-turbo for AI response
+    prompt = f"Joystick X-axis: {x_axis:.2f}, Y-axis: {y_axis:.2f}. Provide a movement command."
+    
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are controlling a robot."},
+            {"role": "user", "content": prompt}
+        ],
         max_tokens=50,
         temperature=0.7
     )
-    ai_response = response.choices[0].text.strip()
+    ai_response = response['choices'][0]['message']['content'].strip().lower()
 
     # Basic movement logic based on AI response
     if "forward" in ai_response:
