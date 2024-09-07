@@ -23,63 +23,89 @@ import sys
 import pygame
 import openai  # Install this library: pip install openai
 
-# ... (GPIO setup and other initializations as in your original code) ...
+# GPIO setup (update with your actual GPIO pins)
+pin1, pin2, pin3, pin4 = 17, 18, 22, 23
 
-# Replace 'YOUR_GPT3_API_KEY' with your actual GPT-3 API key.
-openai.api_key = 'YOUR_GPT3_API_KEY'
+gpio.setmode(gpio.BCM)
+gpio.setup(pin1, gpio.OUT)
+gpio.setup(pin2, gpio.OUT)
+gpio.setup(pin3, gpio.OUT)
+gpio.setup(pin4, gpio.OUT)
+
+# Pygame initialization for joystick control
+pygame.init()
+pygame.joystick.init()
+joystick = pygame.joystick.Joystick(0)
+joystick.init()
+
+# OpenAI setup (Replace 'YOUR_GPT_API_KEY' with your actual API key)
+openai.api_key = 'YOUR_GPT_API_KEY'
+
+def stop():
+    gpio.output(pin1, False)
+    gpio.output(pin2, False)
+    gpio.output(pin3, False)
+    gpio.output(pin4, False)
+
+def move_forward():
+    gpio.output(pin1, True)
+    gpio.output(pin2, False)
+    gpio.output(pin3, True)
+    gpio.output(pin4, False)
+
+def move_backward():
+    gpio.output(pin1, False)
+    gpio.output(pin2, True)
+    gpio.output(pin3, False)
+    gpio.output(pin4, True)
+
+def turn_left():
+    gpio.output(pin1, False)
+    gpio.output(pin2, True)
+    gpio.output(pin3, True)
+    gpio.output(pin4, False)
+
+def turn_right():
+    gpio.output(pin1, True)
+    gpio.output(pin2, False)
+    gpio.output(pin3, False)
+    gpio.output(pin4, True)
 
 def ai_control(joystick):
     # Get the joystick values
     x_axis = joystick.get_axis(0)
     y_axis = joystick.get_axis(1)
 
-    # Prepare the text prompt to send to GPT-3
-    prompt = f"Joystick X-axis: {x_axis:.2f}, Y-axis: {y_axis:.2f}"
+    # Prepare the text prompt to send to GPT-3.5-turbo
+    prompt = f"Joystick X-axis: {x_axis:.2f}, Y-axis: {y_axis:.2f}. Provide a movement command."
 
-    # Send the prompt to GPT-3 for AI-generated response
-    response = openai.Completion.create(
-        engine="text-davinci-002",  # Choose an appropriate GPT-3 engine
-        prompt=prompt,
-        max_tokens=50,  # Adjust based on desired response length
-        temperature=0.7,  # Adjust for more/less randomness in responses
-        stop=None,  # You can set a custom stop sequence if needed
+    # Send the prompt to GPT-3.5-turbo for AI-generated response
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are controlling a robot."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=50,
+        temperature=0.7,
     )
 
     # Extract the AI-generated response
-    ai_response = response.choices[0].text.strip()
+    ai_response = response['choices'][0]['message']['content'].strip().lower()
 
     # Process the AI response to control the robot
     if "forward" in ai_response:
-        # Move forward
-        gpio.output(pin1, True)
-        gpio.output(pin2, False)
-        gpio.output(pin3, True)
-        gpio.output(pin4, False)
+        move_forward()
     elif "backward" in ai_response:
-        # Move backward
-        gpio.output(pin1, False)
-        gpio.output(pin2, True)
-        gpio.output(pin3, False)
-        gpio.output(pin4, True)
+        move_backward()
     elif "left" in ai_response:
-        # Turn left
-        gpio.output(pin1, False)
-        gpio.output(pin2, True)
-        gpio.output(pin3, True)
-        gpio.output(pin4, False)
+        turn_left()
     elif "right" in ai_response:
-        # Turn right
-        gpio.output(pin1, True)
-        gpio.output(pin2, False)
-        gpio.output(pin3, False)
-        gpio.output(pin4, True)
+        turn_right()
     else:
-        # Stop
         stop()
 
 def main():
-    # ... (Joystick initialization and other parts of your original code) ...
-
     try:
         while True:
             # Process Pygame events
