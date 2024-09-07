@@ -3,7 +3,7 @@
 >This needs to be updated to work with the latest openai python library.
 
 >[!NOTE]
->Open AI model text-davinci is deprecated and will be replaced in future files.
+>Open AI model text-davinci-002 is deprecated and will be replaced shortly.
 
 >[!CAUTION]
 >These files have been tested on a test robot, all models and files will be different for you.
